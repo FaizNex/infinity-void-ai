@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
@@ -15,13 +14,32 @@ export async function POST(req: Request) {
     const { messages } = await req.json();
     const lastMessage = messages[messages.length - 1]?.content || 'Hello';
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    
-    // Updated to standard and active model
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    // Direct Google Gemini REST API endpoint call to bypass SDK routing issues
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
-    const result = await model.generateContent(lastMessage);
-    const responseText = result.response.text();
+    const apiResponse = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: lastMessage }],
+          },
+        ],
+      }),
+    });
+
+    const data = await apiResponse.json();
+
+    if (!apiResponse.ok) {
+      throw new Error(data.error?.message || 'Failed to communicate with Gemini API');
+    }
+
+    const responseText =
+      data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      'No response generated from AI.';
 
     return NextResponse.json({ content: responseText });
   } catch (error: any) {
