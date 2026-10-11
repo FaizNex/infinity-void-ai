@@ -2,53 +2,56 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
+    const { messages } = await req.json();
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'GEMINI_API_KEY is not configured.' },
+        { error: 'GEMINI_API_KEY Missing in Vercel Environment Variables' },
         { status: 500 }
       );
     }
 
-    const { messages } = await req.json();
-    const lastMessage = messages[messages.length - 1]?.content || 'Hello';
+    // Latest message extract karein
+    const lastMessage = messages[messages.length - 1];
+    const promptText = lastMessage?.content || "Hello";
 
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: lastMessage }],
-          },
-        ],
-        systemInstruction: {
-          parts: [
+    // Direct Google Gemini API endpoint call
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
             {
-              text: "You are Infinity Void AI, a next-gen intelligence workspace. Always identify yourself strictly as Infinity Void AI. Never call yourself Gemini and never say you were built by Google.",
+              parts: [{ text: promptText }],
             },
           ],
-        },
-      }),
-    });
+        }),
+      }
+    );
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error?.message || 'Failed to fetch from Gemini API');
+      console.error("Gemini API Error:", data);
+      return NextResponse.json(
+        { error: data.error?.message || 'Gemini API Error' },
+        { status: response.status }
+      );
     }
 
-    const responseText =
-      data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+    // Extract generated text
+    const reply =
+      data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "Koi response nahi mila.";
 
-    return NextResponse.json({ content: responseText });
+    return NextResponse.json({ content: reply });
   } catch (error: any) {
-    console.error('API Error:', error);
+    console.error("Server Route Error:", error);
     return NextResponse.json(
       { error: error.message || 'Internal Server Error' },
       { status: 500 }
