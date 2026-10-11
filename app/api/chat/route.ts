@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // Using official stable model 'gemini-1.5-flash' with system instruction
+    // Sirf official aur stable model use kiya hai jo error nahi dega
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-1.5-flash',
       systemInstruction: "You are Infinity Void AI, a next-gen intelligence workspace. Always identify yourself strictly as Infinity Void AI. Never call yourself Gemini and never say you were built by Google."
