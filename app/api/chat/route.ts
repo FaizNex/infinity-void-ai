@@ -1,3 +1,4 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
@@ -14,38 +15,35 @@ export async function POST(req: Request) {
     const { messages } = await req.json();
     const lastMessage = messages[messages.length - 1]?.content || 'Hello';
 
-    // Using the latest supported active model endpoint: gemini-2.5-flash
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const genAI = new GoogleGenerativeAI(apiKey);
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: lastMessage }],
-          },
-        ],
-        systemInstruction: {
-          parts: [
-            {
-              text: "You are Infinity Void AI, a next-gen intelligence workspace. Always identify yourself strictly as Infinity Void AI. Never call yourself Gemini and never say you were built by Google.",
-            },
-          ],
-        },
-      }),
-    });
+    // Primary and fallback models supported by Google Gemini
+    const supportedModels = ['gemini-1.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-pro'];
+    let responseText = '';
+    let lastError = null;
 
-    const data = await response.json();
+    for (const modelName of supportedModels) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          systemInstruction:
+            "You are Infinity Void AI, a next-gen intelligence workspace. Always identify yourself strictly as Infinity Void AI. Never call yourself Gemini and never say you were built by Google.",
+        });
 
-    if (!response.ok) {
-      throw new Error(data.error?.message || 'Failed to fetch from Gemini API');
+        const result = await model.generateContent(lastMessage);
+        responseText = result.response.text();
+        
+        // If successful, exit loop
+        if (responseText) break;
+      } catch (err: any) {
+        console.warn(`Model ${modelName} failed, trying next fallback...`, err?.message);
+        lastError = err;
+      }
     }
 
-    const responseText =
-      data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+    if (!responseText) {
+      throw lastError || new Error('Unable to connect to AI models.');
+    }
 
     return NextResponse.json({ content: responseText });
   } catch (error: any) {
