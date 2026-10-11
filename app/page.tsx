@@ -16,7 +16,6 @@ import {
   User,
   Lock,
   Mail,
-  Bot,
   Zap,
   LogIn,
   X
@@ -30,8 +29,41 @@ interface Message {
   documentName?: string;
 }
 
+// Custom Infinity Void Logo Component
+const InfinityVoidLogo = ({ className = "w-6 h-6" }: { className?: string }) => (
+  <svg
+    viewBox="0 0 100 100"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <defs>
+      <linearGradient id="infinityGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#818CF8" />
+        <stop offset="50%" stopColor="#C084FC" />
+        <stop offset="100%" stopColor="#38BDF8" />
+      </linearGradient>
+      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="4" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      </filter>
+    </defs>
+    {/* Outer Glowing Infinity Loop */}
+    <path
+      d="M 30,50 C 15,30 15,70 30,50 C 45,30 55,70 70,50 C 85,30 85,70 70,50 C 55,30 45,70 30,50 Z"
+      stroke="url(#infinityGradient)"
+      strokeWidth="7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      filter="url(#glow)"
+    />
+    {/* Center Core Void Glow */}
+    <circle cx="50" cy="50" r="5" fill="#FFFFFF" className="animate-ping" />
+    <circle cx="50" cy="50" r="3" fill="#A855F7" />
+  </svg>
+);
+
 export default function Home() {
-  // Auth & Modal States
   const [user, setUser] = useState<any>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -41,7 +73,6 @@ export default function Home() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authMessage, setAuthMessage] = useState<string | null>(null);
 
-  // Chat States
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,7 +85,6 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
 
-  // Check Supabase Auth Session
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -82,17 +112,13 @@ export default function Home() {
     scrollToBottom();
   }, [messages, loading]);
 
-  // Auth Functions
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
     setAuthMessage(null);
 
     if (authMode === 'signup') {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      const { error } = await supabase.auth.signUp({ email, password });
       if (error) {
         setAuthError(error.message);
       } else {
@@ -100,10 +126,7 @@ export default function Home() {
         setTimeout(() => setAuthMode('login'), 2000);
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setAuthError(error.message);
       } else {
@@ -118,14 +141,11 @@ export default function Home() {
     await supabase.auth.signOut();
   };
 
-  // Upload Handlers
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageBase64(reader.result as string);
-      };
+      reader.onloadend = () => setImageBase64(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
@@ -135,14 +155,11 @@ export default function Home() {
     if (file) {
       setDocumentName(file.name);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setDocumentBase64(reader.result as string);
-      };
+      reader.onloadend = () => setDocumentBase64(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-  // Send Message
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!input.trim() && !imageBase64 && !documentBase64) return;
@@ -170,26 +187,39 @@ export default function Home() {
         }),
       });
 
-      if (!response.ok) {
+      if (!response.ok || !response.body) {
         throw new Error('Failed to generate response');
       }
 
-      const data = await response.json();
-      
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: data.content || data.reply || "Namaste! Main Infinity Void AI hoon. Aapki kya sahayata kar sakta hoon?",
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      const fallbackMessage: Message = {
-        role: 'assistant',
-        content: "Aapka message mil gaya hai! Infinity Void AI successfully response kar raha hai.",
-      };
-      setMessages((prev) => [...prev, fallbackMessage]);
-    } finally {
+      setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
       setLoading(false);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantContent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        assistantContent += chunk;
+
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          newMessages[newMessages.length - 1] = {
+            role: 'assistant',
+            content: assistantContent,
+          };
+          return newMessages;
+        });
+      }
+    } catch (error) {
+      setLoading(false);
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: 'Connection error. Please try again.' },
+      ]);
     }
   };
 
@@ -213,19 +243,18 @@ export default function Home() {
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-slate-800/60 bg-slate-950/40 backdrop-blur-xl">
         <div className="flex items-center space-x-3">
-          <div className="p-2.5 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-lg shadow-indigo-500/20">
-            <Sparkles className="w-5 h-5 text-white" />
+          <div className="p-2.5 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border border-indigo-500/30 rounded-2xl shadow-lg shadow-indigo-500/10">
+            <InfinityVoidLogo className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-wide text-white flex items-center space-x-2">
               <span>Infinity Void AI</span>
-              <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-mono">v2.0</span>
+              <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-mono">v2.1 Flash</span>
             </h1>
-            <p className="text-xs text-slate-400">Gemini 1.5 Powered Intelligence</p>
+            <p className="text-xs text-slate-400">Next-Gen Intelligence Workspace</p>
           </div>
         </div>
 
-        {/* User Auth Status / Action Button */}
         <div className="flex items-center space-x-3">
           {user ? (
             <div className="flex items-center space-x-3">
@@ -254,14 +283,14 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Chat Messages Area */}
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 max-w-4xl mx-auto w-full">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
             <div className="relative">
               <div className="absolute inset-0 bg-indigo-500/20 rounded-full blur-xl animate-pulse" />
               <div className="p-5 bg-slate-900/80 rounded-3xl border border-slate-800 relative shadow-2xl">
-                <Bot className="w-12 h-12 text-indigo-400" />
+                <InfinityVoidLogo className="w-12 h-12" />
               </div>
             </div>
             
@@ -270,7 +299,7 @@ export default function Home() {
                 Ready to explore the void?
               </h2>
               <p className="text-slate-400 max-w-sm text-sm">
-                Ask anything, attach code files, analyze images, or test full-stack AI capabilities.
+                Ask anything, attach code files, analyze images, or test lighting-fast AI streaming.
               </p>
             </div>
 
@@ -296,8 +325,8 @@ export default function Home() {
               }`}
             >
               {msg.role === 'assistant' && (
-                <div className="p-2 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/20 mt-1">
-                  <Bot className="w-4 h-4" />
+                <div className="p-2 bg-slate-900 border border-purple-500/30 rounded-xl text-white shadow-lg shadow-purple-500/20 mt-1">
+                  <InfinityVoidLogo className="w-5 h-5" />
                 </div>
               )}
               
@@ -328,7 +357,7 @@ export default function Home() {
                   </ReactMarkdown>
                 </div>
 
-                {msg.role === 'assistant' && (
+                {msg.role === 'assistant' && msg.content && (
                   <div className="mt-3 flex items-center justify-end space-x-2 border-t border-slate-800/80 pt-2">
                     <button
                       onClick={() => copyToClipboard(msg.content, index)}
@@ -361,19 +390,19 @@ export default function Home() {
 
         {loading && (
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-indigo-600 rounded-xl text-white">
-              <Bot className="w-4 h-4" />
+            <div className="p-2 bg-slate-900 border border-indigo-500/40 rounded-xl text-white">
+              <InfinityVoidLogo className="w-5 h-5" />
             </div>
             <div className="bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-3 flex items-center space-x-2">
               <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
-              <span className="text-xs text-slate-400">Processing response...</span>
+              <span className="text-xs text-slate-400">Streaming response instantly...</span>
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
+      {/* Input */}
       <div className="border-t border-slate-800/60 bg-slate-950/60 backdrop-blur-xl p-4">
         <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex flex-col space-y-2">
           
@@ -448,12 +477,10 @@ export default function Home() {
         </form>
       </div>
 
-      {/* OPTIONAL AUTH MODAL (Popup) */}
+      {/* Auth Modal */}
       {showAuthModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
           <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
-            
-            {/* Close Button */}
             <button
               onClick={() => setShowAuthModal(false)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-full bg-slate-800/50"
@@ -463,13 +490,12 @@ export default function Home() {
 
             <div className="flex flex-col items-center text-center mb-6">
               <div className="p-3 bg-gradient-to-tr from-purple-600 to-indigo-500 rounded-2xl shadow-lg shadow-purple-500/30 mb-3">
-                <Sparkles className="w-6 h-6 text-white" />
+                <InfinityVoidLogo className="w-6 h-6" />
               </div>
               <h2 className="text-2xl font-bold text-white">Welcome Back</h2>
-              <p className="text-slate-400 text-xs mt-1">Sign in to save your history & preferences</p>
+              <p className="text-slate-400 text-xs mt-1">Sign in to save your workspace</p>
             </div>
 
-            {/* Tab Switcher */}
             <div className="grid grid-cols-2 p-1 bg-slate-950 rounded-2xl border border-slate-800 mb-6">
               <button
                 onClick={() => { setAuthMode('login'); setAuthError(null); setAuthMessage(null); }}
