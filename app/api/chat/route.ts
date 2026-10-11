@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // Model ke sath system instruction add kar di hai taaki yeh apna naam Infinity Void AI bataye
+    // Using official stable model 'gemini-1.5-flash' with system instruction
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-1.5-flash',
       systemInstruction: "You are Infinity Void AI, a next-gen intelligence workspace. Always identify yourself strictly as Infinity Void AI. Never call yourself Gemini and never say you were built by Google."
