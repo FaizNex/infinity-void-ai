@@ -18,7 +18,8 @@ import {
   Mail,
   Bot,
   Zap,
-  ArrowRight
+  LogIn,
+  X
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -30,9 +31,10 @@ interface Message {
 }
 
 export default function Home() {
-  // Auth States
+  // Auth & Modal States
   const [user, setUser] = useState<any>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -52,7 +54,7 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
 
-  // Check Supabase Auth Session on mount
+  // Check Supabase Auth Session
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -94,7 +96,8 @@ export default function Home() {
       if (error) {
         setAuthError(error.message);
       } else {
-        setAuthMessage('Account created successfully! Check your email or try logging in.');
+        setAuthMessage('Account ban gaya hai! Ab aap Log In kar sakte hain.');
+        setTimeout(() => setAuthMode('login'), 2000);
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({
@@ -103,16 +106,19 @@ export default function Home() {
       });
       if (error) {
         setAuthError(error.message);
+      } else {
+        setShowAuthModal(false);
+        setEmail('');
+        setPassword('');
       }
     }
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setMessages([]);
   };
 
-  // Handle Image Upload
+  // Upload Handlers
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -124,7 +130,6 @@ export default function Home() {
     }
   };
 
-  // Handle Document Upload
   const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -137,7 +142,7 @@ export default function Home() {
     }
   };
 
-  // Send Message Handler
+  // Send Message
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!input.trim() && !imageBase64 && !documentBase64) return;
@@ -202,106 +207,8 @@ export default function Home() {
     );
   }
 
-  // 1. IF USER IS NOT LOGGED IN -> SHOW CREATIVE AUTH SCREEN
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-[#090d16] bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.25),rgba(255,255,255,0))] flex flex-col items-center justify-center p-4">
-        {/* Glow Effects */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute top-1/3 left-1/3 w-80 h-80 bg-blue-600/20 rounded-full blur-[120px] pointer-events-none" />
-
-        <div className="relative z-10 w-full max-w-md bg-slate-900/60 border border-slate-800/80 backdrop-blur-2xl rounded-3xl p-8 shadow-2xl shadow-purple-950/40">
-          {/* Header Icon */}
-          <div className="flex flex-col items-center text-center mb-8">
-            <div className="p-3 bg-gradient-to-tr from-purple-600 to-indigo-500 rounded-2xl shadow-lg shadow-purple-500/30 mb-3 animate-pulse">
-              <Sparkles className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-              Infinity Void AI
-            </h1>
-            <p className="text-slate-400 text-sm mt-1">Next-Gen Intelligence Workspace</p>
-          </div>
-
-          {/* Auth Tab Switcher */}
-          <div className="grid grid-cols-2 p-1 bg-slate-950/60 rounded-2xl border border-slate-800 mb-6">
-            <button
-              onClick={() => { setAuthMode('login'); setAuthError(null); setAuthMessage(null); }}
-              className={`py-2 text-sm font-medium rounded-xl transition ${
-                authMode === 'login' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Log In
-            </button>
-            <button
-              onClick={() => { setAuthMode('signup'); setAuthError(null); setAuthMessage(null); }}
-              className={`py-2 text-sm font-medium rounded-xl transition ${
-                authMode === 'signup' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Sign Up
-            </button>
-          </div>
-
-          {/* Auth Form */}
-          <form onSubmit={handleAuth} className="space-y-4">
-            <div>
-              <label className="text-xs text-slate-400 font-medium mb-1.5 block">Email Address</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full bg-slate-950/70 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs text-slate-400 font-medium mb-1.5 block">Password</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-slate-950/70 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition"
-                />
-              </div>
-            </div>
-
-            {authError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs text-center">
-                {authError}
-              </div>
-            )}
-
-            {authMessage && (
-              <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-xs text-center">
-                {authMessage}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium rounded-xl transition shadow-lg shadow-indigo-600/25 flex items-center justify-center space-x-2 mt-2"
-            >
-              <span>{authMode === 'login' ? 'Sign In to Workspace' : 'Create Account'}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  // 2. IF USER IS LOGGED IN -> SHOW FUTURISTIC CHAT INTERFACE
   return (
-    <div className="flex flex-col h-screen bg-[#070a12] text-slate-100 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))]">
+    <div className="flex flex-col h-screen bg-[#070a12] text-slate-100 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))] relative">
       
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-slate-800/60 bg-slate-950/40 backdrop-blur-xl">
@@ -314,29 +221,40 @@ export default function Home() {
               <span>Infinity Void AI</span>
               <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-mono">v2.0</span>
             </h1>
-            <p className="text-xs text-slate-400">Gemini 1.5 & Supabase Sync</p>
+            <p className="text-xs text-slate-400">Gemini 1.5 Powered Intelligence</p>
           </div>
         </div>
 
-        {/* User Info & Logout Button */}
+        {/* User Auth Status / Action Button */}
         <div className="flex items-center space-x-3">
-          <div className="hidden sm:flex items-center space-x-2 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-full text-xs">
-            <User className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="text-slate-300 max-w-[150px] truncate">{user.email}</span>
-          </div>
-
-          <button
-            onClick={handleLogout}
-            className="p-2 bg-slate-900 hover:bg-red-500/10 border border-slate-800 hover:border-red-500/30 text-slate-400 hover:text-red-400 rounded-xl transition flex items-center space-x-1.5 text-xs"
-            title="Log Out"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Logout</span>
-          </button>
+          {user ? (
+            <div className="flex items-center space-x-3">
+              <div className="hidden sm:flex items-center space-x-2 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-full text-xs">
+                <User className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="text-slate-300 max-w-[150px] truncate">{user.email}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-2 bg-slate-900 hover:bg-red-500/10 border border-slate-800 hover:border-red-500/30 text-slate-400 hover:text-red-400 rounded-xl transition flex items-center space-x-1.5 text-xs"
+                title="Log Out"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Logout</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-xl transition shadow-lg shadow-indigo-600/25 flex items-center space-x-2"
+            >
+              <LogIn className="w-4 h-4" />
+              <span>Sign In / Register</span>
+            </button>
+          )}
         </div>
       </header>
 
-      {/* Chat Messages Area */}
+      {/* Main Chat Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 max-w-4xl mx-auto w-full">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
@@ -356,7 +274,6 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Feature Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md w-full pt-2">
               <div className="p-3.5 bg-slate-900/40 border border-slate-800/80 rounded-2xl text-left hover:border-indigo-500/40 transition">
                 <Zap className="w-4 h-4 text-indigo-400 mb-1.5" />
@@ -530,6 +447,102 @@ export default function Home() {
           </div>
         </form>
       </div>
+
+      {/* OPTIONAL AUTH MODAL (Popup) */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+            
+            {/* Close Button */}
+            <button
+              onClick={() => setShowAuthModal(false)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-full bg-slate-800/50"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="p-3 bg-gradient-to-tr from-purple-600 to-indigo-500 rounded-2xl shadow-lg shadow-purple-500/30 mb-3">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-white">Welcome Back</h2>
+              <p className="text-slate-400 text-xs mt-1">Sign in to save your history & preferences</p>
+            </div>
+
+            {/* Tab Switcher */}
+            <div className="grid grid-cols-2 p-1 bg-slate-950 rounded-2xl border border-slate-800 mb-6">
+              <button
+                onClick={() => { setAuthMode('login'); setAuthError(null); setAuthMessage(null); }}
+                className={`py-2 text-xs font-medium rounded-xl transition ${
+                  authMode === 'login' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Log In
+              </button>
+              <button
+                onClick={() => { setAuthMode('signup'); setAuthError(null); setAuthMessage(null); }}
+                className={`py-2 text-xs font-medium rounded-xl transition ${
+                  authMode === 'signup' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Sign Up
+              </button>
+            </div>
+
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div>
+                <label className="text-xs text-slate-400 font-medium mb-1 block">Email Address</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-400 font-medium mb-1 block">Password</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition"
+                  />
+                </div>
+              </div>
+
+              {authError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs text-center">
+                  {authError}
+                </div>
+              )}
+
+              {authMessage && (
+                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-xs text-center">
+                  {authMessage}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl text-sm transition shadow-lg shadow-indigo-600/25 mt-2"
+              >
+                {authMode === 'login' ? 'Sign In' : 'Create Account'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
