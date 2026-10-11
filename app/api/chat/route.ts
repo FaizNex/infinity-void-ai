@@ -6,7 +6,7 @@ export async function POST(req: Request) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'GEMINI_API_KEY is not configured in Vercel settings.' },
+        { error: 'GEMINI_API_KEY is not configured.' },
         { status: 500 }
       );
     }
@@ -14,7 +14,6 @@ export async function POST(req: Request) {
     const { messages } = await req.json();
     const lastMessage = messages[messages.length - 1]?.content || 'Hello';
 
-    // Direct Google Gemini REST endpoint (Stable v1 API)
     const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
@@ -41,7 +40,7 @@ export async function POST(req: Request) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error?.message || 'Failed to fetch from API');
+      throw new Error(data.error?.message || 'Failed to fetch from Gemini API');
     }
 
     const responseText =
