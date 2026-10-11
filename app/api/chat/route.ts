@@ -7,7 +7,7 @@ export async function POST(req: Request) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'GEMINI_API_KEY missing in Vercel settings.' },
+        { error: 'GEMINI_API_KEY is not configured in Vercel settings.' },
         { status: 500 }
       );
     }
@@ -16,7 +16,9 @@ export async function POST(req: Request) {
     const lastMessage = messages[messages.length - 1]?.content || 'Hello';
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    
+    // Using gemini-1.5-pro which is fully supported and stable on all API versions
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
 
     const result = await model.generateContent(lastMessage);
     const responseText = result.response.text();
