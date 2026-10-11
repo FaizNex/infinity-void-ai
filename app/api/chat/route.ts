@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     console.error("Server Route Error:", error);
     return NextResponse.json(
       { error: error.message || 'Internal Server Error' },
-      { status: 500 }
+      { status: 500 } 
     );
   }
 }
