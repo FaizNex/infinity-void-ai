@@ -14,8 +14,8 @@ export async function POST(req: Request) {
     const { messages } = await req.json();
     const lastMessage = messages[messages.length - 1]?.content || 'Hello';
 
-    // Direct Google Gemini v1 REST API endpoint (sabse stable aur reliable)
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // Using the latest supported active model endpoint: gemini-2.5-flash
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -28,7 +28,6 @@ export async function POST(req: Request) {
             parts: [{ text: lastMessage }],
           },
         ],
-        // System instruction taaki AI hamesha "Infinity Void AI" bole
         systemInstruction: {
           parts: [
             {
