@@ -7,7 +7,7 @@ export async function POST(req: Request) {
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'GEMINI_API_KEY is not configured in Vercel Environment Variables.' },
+        { error: 'GEMINI_API_KEY missing in Vercel settings.' },
         { status: 500 }
       );
     }
@@ -18,36 +18,14 @@ export async function POST(req: Request) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    const result = await model.generateContentStream(lastMessage);
+    const result = await model.generateContent(lastMessage);
+    const responseText = result.response.text();
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder();
-        try {
-          for await (const chunk of result.stream) {
-            const text = chunk.text();
-            if (text) {
-              controller.enqueue(encoder.encode(text));
-            }
-          }
-          controller.close();
-        } catch (err) {
-          controller.error(err);
-        }
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream; charset=utf-8',
-        'Cache-Control': 'no-cache, no-transform',
-        'Connection': 'keep-alive',
-      },
-    });
+    return NextResponse.json({ content: responseText });
   } catch (error: any) {
-    console.error('Chat API Error:', error);
+    console.error('API Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to connect to AI server.' },
+      { error: error.message || 'Internal Server Error' },
       { status: 500 }
     );
   }

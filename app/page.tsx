@@ -187,39 +187,25 @@ export default function Home() {
         }),
       });
 
-      if (!response.ok || !response.body) {
-        throw new Error('Failed to generate response');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate response');
       }
 
-      setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
-      setLoading(false);
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: data.content || "Namaste! Main Infinity Void AI hoon.",
+      };
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let assistantContent = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        assistantContent += chunk;
-
-        setMessages((prev) => {
-          const newMessages = [...prev];
-          newMessages[newMessages.length - 1] = {
-            role: 'assistant',
-            content: assistantContent,
-          };
-          return newMessages;
-        });
-      }
-    } catch (error) {
-      setLoading(false);
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error: any) {
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'Connection error. Please try again.' },
+        { role: 'assistant', content: `Error: ${error.message || 'Connection failed.'}` },
       ]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -249,7 +235,7 @@ export default function Home() {
           <div>
             <h1 className="text-lg font-bold tracking-wide text-white flex items-center space-x-2">
               <span>Infinity Void AI</span>
-              <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-mono">v2.1 Flash</span>
+              <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-mono">v2.2 Stable</span>
             </h1>
             <p className="text-xs text-slate-400">Next-Gen Intelligence Workspace</p>
           </div>
@@ -299,7 +285,7 @@ export default function Home() {
                 Ready to explore the void?
               </h2>
               <p className="text-slate-400 max-w-sm text-sm">
-                Ask anything, attach code files, analyze images, or test lighting-fast AI streaming.
+                Ask anything, attach code files, analyze images, or test full-stack AI capabilities.
               </p>
             </div>
 
@@ -395,7 +381,7 @@ export default function Home() {
             </div>
             <div className="bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-3 flex items-center space-x-2">
               <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
-              <span className="text-xs text-slate-400">Streaming response instantly...</span>
+              <span className="text-xs text-slate-400">Processing response...</span>
             </div>
           </div>
         )}
