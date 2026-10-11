@@ -30,7 +30,7 @@ export default function Home() {
     e.preventDefault();
     if (!input.trim() || loading) return;
 
-    // 1. Precise Real-Time Date, Day, and Time extraction
+    // Precise Real-Time Date, Day, and Time extraction
     const now = new Date();
     const options: Intl.DateTimeFormatOptions = { 
       weekday: 'long', 
@@ -51,7 +51,6 @@ export default function Home() {
     setLoading(true);
 
     try {
-      // 2. Injecting real-time context dynamically into prompt
       const enhancedPrompt = `[System Context: Current local Date, Day and Time is ${currentDateTimeString}]. User Query: ${userMessage}`;
 
       const response = await fetch("/api/chat", {
@@ -120,7 +119,7 @@ export default function Home() {
       </header>
 
       {/* CHAT CONTAINER */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 max-w-4xl w-full mx-auto z-10 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 max-w-4xl w-full mx-auto z-10">
         {messages.map((msg, index) => (
           <div
             key={index}
@@ -128,7 +127,6 @@ export default function Home() {
               msg.role === "user" ? "flex-row-reverse" : "flex-row"
             }`}
           >
-            {/* Avatar */}
             <div
               className={`w-9 h-9 rounded-2xl flex items-center justify-center text-xs font-bold shrink-0 shadow-lg ${
                 msg.role === "user"
@@ -139,7 +137,6 @@ export default function Home() {
               {msg.role === "user" ? "YOU" : "AI"}
             </div>
 
-            {/* Bubble */}
             <div
               className={`max-w-[78%] sm:max-w-[82%] px-5 py-3.5 rounded-2xl text-sm leading-relaxed shadow-xl backdrop-blur-md ${
                 msg.role === "user"
@@ -152,7 +149,6 @@ export default function Home() {
           </div>
         ))}
 
-        {/* Loading Indicator */}
         {loading && (
           <div className="flex items-start gap-3.5">
             <div className="w-9 h-9 rounded-2xl bg-cyan-600 flex items-center justify-center text-xs font-bold text-white shadow-[0_0_15px_rgba(6,182,212,0.4)]">
