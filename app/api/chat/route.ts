@@ -16,7 +16,8 @@ export async function POST(req: Request) {
     const lastMessage = messages[messages.length - 1]?.content || 'Hello';
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    // Using the exact model recommended by the API error message
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.8-flash' });
 
     const result = await model.generateContent(lastMessage);
     const responseText = result.response.text();
