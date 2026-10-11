@@ -8,16 +8,17 @@ import {
   Camera, 
   Paperclip, 
   Loader2, 
-  Volume2, 
-  VolumeX, 
-  Mic, 
-  Square, 
-  Bot, 
-  User, 
   Sparkles, 
   Trash2, 
   Copy, 
-  Check 
+  Check,
+  LogOut,
+  User,
+  Lock,
+  Mail,
+  Bot,
+  Zap,
+  ArrowRight
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -29,19 +30,47 @@ interface Message {
 }
 
 export default function Home() {
+  // Auth States
+  const [user, setUser] = useState<any>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
+
+  // Chat States
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [documentBase64, setDocumentBase64] = useState<string | null>(null);
   const [documentName, setDocumentName] = useState<string | null>(null);
-  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
-  const [isListening, setIsListening] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
+
+  // Check Supabase Auth Session on mount
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      setIsAuthLoading(false);
+    };
+
+    checkUser();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setIsAuthLoading(false);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -50,6 +79,38 @@ export default function Home() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, loading]);
+
+  // Auth Functions
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setAuthMessage(null);
+
+    if (authMode === 'signup') {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      if (error) {
+        setAuthError(error.message);
+      } else {
+        setAuthMessage('Account created successfully! Check your email or try logging in.');
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) {
+        setAuthError(error.message);
+      }
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setMessages([]);
+  };
 
   // Handle Image Upload
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,7 +137,7 @@ export default function Home() {
     }
   };
 
-  // Send Message Handler (Gemini API Integration)
+  // Send Message Handler
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!input.trim() && !imageBase64 && !documentBase64) return;
@@ -96,7 +157,6 @@ export default function Home() {
     setLoading(true);
 
     try {
-      // Call your API or Gemini backend endpoint here
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,7 +166,7 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate response from AI');
+        throw new Error('Failed to generate response');
       }
 
       const data = await response.json();
@@ -118,10 +178,9 @@ export default function Home() {
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
-      // Fallback simulated response if API route is configured differently
       const fallbackMessage: Message = {
         role: 'assistant',
-        content: "Aapka message mil gaya hai! Infinity Void AI successfully connected hai.",
+        content: "Aapka message mil gaya hai! Infinity Void AI successfully response kar raha hai.",
       };
       setMessages((prev) => [...prev, fallbackMessage]);
     } finally {
@@ -135,32 +194,181 @@ export default function Home() {
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
+  if (isAuthLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#090d16] text-white">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+      </div>
+    );
+  }
+
+  // 1. IF USER IS NOT LOGGED IN -> SHOW CREATIVE AUTH SCREEN
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#090d16] bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.25),rgba(255,255,255,0))] flex flex-col items-center justify-center p-4">
+        {/* Glow Effects */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute top-1/3 left-1/3 w-80 h-80 bg-blue-600/20 rounded-full blur-[120px] pointer-events-none" />
+
+        <div className="relative z-10 w-full max-w-md bg-slate-900/60 border border-slate-800/80 backdrop-blur-2xl rounded-3xl p-8 shadow-2xl shadow-purple-950/40">
+          {/* Header Icon */}
+          <div className="flex flex-col items-center text-center mb-8">
+            <div className="p-3 bg-gradient-to-tr from-purple-600 to-indigo-500 rounded-2xl shadow-lg shadow-purple-500/30 mb-3 animate-pulse">
+              <Sparkles className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+              Infinity Void AI
+            </h1>
+            <p className="text-slate-400 text-sm mt-1">Next-Gen Intelligence Workspace</p>
+          </div>
+
+          {/* Auth Tab Switcher */}
+          <div className="grid grid-cols-2 p-1 bg-slate-950/60 rounded-2xl border border-slate-800 mb-6">
+            <button
+              onClick={() => { setAuthMode('login'); setAuthError(null); setAuthMessage(null); }}
+              className={`py-2 text-sm font-medium rounded-xl transition ${
+                authMode === 'login' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Log In
+            </button>
+            <button
+              onClick={() => { setAuthMode('signup'); setAuthError(null); setAuthMessage(null); }}
+              className={`py-2 text-sm font-medium rounded-xl transition ${
+                authMode === 'signup' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Sign Up
+            </button>
+          </div>
+
+          {/* Auth Form */}
+          <form onSubmit={handleAuth} className="space-y-4">
+            <div>
+              <label className="text-xs text-slate-400 font-medium mb-1.5 block">Email Address</label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="w-full bg-slate-950/70 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-slate-400 font-medium mb-1.5 block">Password</label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-slate-950/70 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition"
+                />
+              </div>
+            </div>
+
+            {authError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs text-center">
+                {authError}
+              </div>
+            )}
+
+            {authMessage && (
+              <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-xs text-center">
+                {authMessage}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium rounded-xl transition shadow-lg shadow-indigo-600/25 flex items-center justify-center space-x-2 mt-2"
+            >
+              <span>{authMode === 'login' ? 'Sign In to Workspace' : 'Create Account'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. IF USER IS LOGGED IN -> SHOW FUTURISTIC CHAT INTERFACE
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-slate-100">
+    <div className="flex flex-col h-screen bg-[#070a12] text-slate-100 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))]">
+      
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur">
+      <header className="flex items-center justify-between px-6 py-4 border-b border-slate-800/60 bg-slate-950/40 backdrop-blur-xl">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-500/30">
-            <Sparkles className="w-6 h-6 text-white" />
+          <div className="p-2.5 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-lg shadow-indigo-500/20">
+            <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-wide">Infinity Void AI</h1>
-            <p className="text-xs text-slate-400">Powered by Gemini & Supabase</p>
+            <h1 className="text-lg font-bold tracking-wide text-white flex items-center space-x-2">
+              <span>Infinity Void AI</span>
+              <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-mono">v2.0</span>
+            </h1>
+            <p className="text-xs text-slate-400">Gemini 1.5 & Supabase Sync</p>
           </div>
+        </div>
+
+        {/* User Info & Logout Button */}
+        <div className="flex items-center space-x-3">
+          <div className="hidden sm:flex items-center space-x-2 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-full text-xs">
+            <User className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="text-slate-300 max-w-[150px] truncate">{user.email}</span>
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="p-2 bg-slate-900 hover:bg-red-500/10 border border-slate-800 hover:border-red-500/30 text-slate-400 hover:text-red-400 rounded-xl transition flex items-center space-x-1.5 text-xs"
+            title="Log Out"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
         </div>
       </header>
 
       {/* Chat Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 max-w-4xl mx-auto w-full">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-            <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800">
-              <Bot className="w-12 h-12 text-indigo-400 animate-pulse" />
+          <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-indigo-500/20 rounded-full blur-xl animate-pulse" />
+              <div className="p-5 bg-slate-900/80 rounded-3xl border border-slate-800 relative shadow-2xl">
+                <Bot className="w-12 h-12 text-indigo-400" />
+              </div>
             </div>
-            <h2 className="text-2xl font-semibold text-slate-200">Aapki kya madad kar sakta hoon?</h2>
-            <p className="text-slate-400 max-w-md text-sm">
-              Koyi bhi sawal puchein, image ya document upload karein, ya AI se baat karein.
-            </p>
+            
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                Ready to explore the void?
+              </h2>
+              <p className="text-slate-400 max-w-sm text-sm">
+                Ask anything, attach code files, analyze images, or test full-stack AI capabilities.
+              </p>
+            </div>
+
+            {/* Feature Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md w-full pt-2">
+              <div className="p-3.5 bg-slate-900/40 border border-slate-800/80 rounded-2xl text-left hover:border-indigo-500/40 transition">
+                <Zap className="w-4 h-4 text-indigo-400 mb-1.5" />
+                <div className="text-xs font-medium text-white">Smart Vision & OCR</div>
+                <div className="text-[11px] text-slate-500">Upload images for instant analysis</div>
+              </div>
+              <div className="p-3.5 bg-slate-900/40 border border-slate-800/80 rounded-2xl text-left hover:border-indigo-500/40 transition">
+                <Paperclip className="w-4 h-4 text-purple-400 mb-1.5" />
+                <div className="text-xs font-medium text-white">Doc Processing</div>
+                <div className="text-[11px] text-slate-500">Read PDF, TXT and code files</div>
+              </div>
+            </div>
           </div>
         ) : (
           messages.map((msg, index) => (
@@ -171,40 +379,40 @@ export default function Home() {
               }`}
             >
               {msg.role === 'assistant' && (
-                <div className="p-2 bg-indigo-600 rounded-full text-white shadow-md">
-                  <Bot className="w-5 h-5" />
+                <div className="p-2 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/20 mt-1">
+                  <Bot className="w-4 h-4" />
                 </div>
               )}
               
               <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-md ${
+                className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-xl backdrop-blur-md ${
                   msg.role === 'user'
-                    ? 'bg-indigo-600 text-white rounded-br-none'
-                    : 'bg-slate-900 border border-slate-800 text-slate-100 rounded-bl-none'
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-br-none'
+                    : 'bg-slate-900/80 border border-slate-800 text-slate-100 rounded-bl-none'
                 }`}
               >
                 {msg.image && (
                   <img
                     src={msg.image}
                     alt="Uploaded preview"
-                    className="mb-3 rounded-lg max-h-60 object-cover"
+                    className="mb-3 rounded-xl max-h-60 object-cover border border-white/10"
                   />
                 )}
                 {msg.documentName && (
-                  <div className="mb-2 text-xs bg-slate-800 px-2 py-1 rounded border border-slate-700 flex items-center space-x-1">
-                    <Paperclip className="w-3 h-3" />
-                    <span className="truncate">{msg.documentName}</span>
+                  <div className="mb-2 text-xs bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800 flex items-center space-x-2">
+                    <Paperclip className="w-3.5 h-3.5 text-indigo-400" />
+                    <span className="truncate text-slate-300">{msg.documentName}</span>
                   </div>
                 )}
                 
-                <div className="prose prose-invert text-sm">
+                <div className="prose prose-invert text-sm leading-relaxed">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {msg.content}
                   </ReactMarkdown>
                 </div>
 
                 {msg.role === 'assistant' && (
-                  <div className="mt-3 flex items-center justify-end space-x-2 border-t border-slate-800 pt-2">
+                  <div className="mt-3 flex items-center justify-end space-x-2 border-t border-slate-800/80 pt-2">
                     <button
                       onClick={() => copyToClipboard(msg.content, index)}
                       className="text-slate-400 hover:text-white transition text-xs flex items-center space-x-1"
@@ -226,8 +434,8 @@ export default function Home() {
               </div>
 
               {msg.role === 'user' && (
-                <div className="p-2 bg-slate-800 rounded-full text-slate-200 shadow-md">
-                  <User className="w-5 h-5" />
+                <div className="p-2 bg-slate-800 border border-slate-700 rounded-xl text-slate-200 shadow-md mt-1">
+                  <User className="w-4 h-4" />
                 </div>
               )}
             </div>
@@ -236,24 +444,24 @@ export default function Home() {
 
         {loading && (
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-indigo-600 rounded-full text-white">
-              <Bot className="w-5 h-5" />
+            <div className="p-2 bg-indigo-600 rounded-xl text-white">
+              <Bot className="w-4 h-4" />
             </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 flex items-center space-x-2">
+            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl px-4 py-3 flex items-center space-x-2">
               <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
-              <span className="text-sm text-slate-400">Soch raha hoon...</span>
+              <span className="text-xs text-slate-400">Processing response...</span>
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Footer Area */}
-      <div className="border-t border-slate-800 bg-slate-900/60 backdrop-blur p-4">
+      {/* Input Area */}
+      <div className="border-t border-slate-800/60 bg-slate-950/60 backdrop-blur-xl p-4">
         <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex flex-col space-y-2">
-          {/* Previews if any */}
+          
           {(imageBase64 || documentName) && (
-            <div className="flex items-center space-x-2 bg-slate-800/80 p-2 rounded-xl w-fit border border-slate-700">
+            <div className="flex items-center space-x-2 bg-slate-900 p-2 rounded-xl w-fit border border-slate-800">
               {imageBase64 && <span className="text-xs text-indigo-300">📷 Image attached</span>}
               {documentName && <span className="text-xs text-indigo-300">📎 {documentName}</span>}
               <button
@@ -270,7 +478,7 @@ export default function Home() {
             </div>
           )}
 
-          <div className="flex items-center space-x-2 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-2 focus-within:border-indigo-500 transition shadow-inner">
+          <div className="flex items-center space-x-2 bg-slate-900/90 border border-slate-800/80 rounded-2xl px-4 py-2 focus-within:border-indigo-500/60 transition shadow-inner">
             <input
               type="file"
               ref={fileInputRef}
@@ -308,14 +516,14 @@ export default function Home() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Yahan apna message type karein..."
+              placeholder="Ask Infinity Void AI..."
               className="flex-1 bg-transparent border-none outline-none text-slate-100 placeholder-slate-500 text-sm py-2"
             />
 
             <button
               type="submit"
               disabled={loading || (!input.trim() && !imageBase64 && !documentBase64)}
-              className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white p-2.5 rounded-xl transition shadow-md shadow-indigo-600/30 flex items-center justify-center"
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white p-2.5 rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center"
             >
               <Send className="w-4 h-4" />
             </button>
