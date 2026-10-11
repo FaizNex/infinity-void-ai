@@ -171,7 +171,8 @@ export default function Home() {
       documentName: documentName || undefined,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput('');
     setImageBase64(null);
     setDocumentBase64(null);
@@ -183,7 +184,7 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [...messages, userMessage],
+          messages: updatedMessages,
         }),
       });
 
