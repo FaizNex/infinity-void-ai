@@ -17,8 +17,8 @@ export async function POST(req: Request) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // Using gemini-1.5-pro which is fully supported and stable on all API versions
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    // Updated to standard and active model
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const result = await model.generateContent(lastMessage);
     const responseText = result.response.text();
